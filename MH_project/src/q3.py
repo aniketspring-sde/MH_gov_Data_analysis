@@ -1,84 +1,82 @@
-from src.data import Data
-import matplotlib.pyplot as plt
+import csv
+from matplotlib import pyplot as plt
 
 
-class Q3:
-    def __init__(self):
-        self.rows = Data().get_data()
-
-        self.zipcode_to_district = {
-                                    '414001': "Ahmednagar",
-                                    '444001': "Akola",
-                                    '444601': "Amravati",
-                                    '431001': "Aurangabad",
-                                    '401101': "Thane",
-                                    '421308': "Thane",
-                                    '442401': "Chandrapur",
-                                    '424001': "Dhule",
-                                    '421201': "Thane",
-                                    '416115': "Kolhapur",
-                                    '425001': "Jalgaon",
-                                    '421301': "Thane",
-                                    '416003': "Kolhapur",
-                                    '413512': "Latur",
-                                    '423203': "Nashik",
-                                    '401107': "Thane",
-                                    '400001': "Mumbai",
-                                    '440001': "Nagpur",
-                                    '431601': "Nanded",
-                                    '422001': "Nashik",
-                                    '431401': "Parbhani",
-                                    '412303': "Pune",
-                                    '411001': "Pune",
-                                    '416416': "Sangli",
-                                    '413001': "Solapur",
-                                    '400601': "Thane",
-                                    '1421002': "Thane",
-                                    '401208': "Palghar",
-                                    '401303': "Palghar"
-                                }
-        self.district_count = {}
-
-        self.zipcode_count={}
+REGISTRATION_DATE = "CompanyRegistrationdate_date"
+REGISTERED_ADDRESS = "Registered_Office_Address"
+ZIPCODE = "zipcode"
+DISTRICT = "district"
 
 
-    def reg_2015(self):
-        for row in self.rows:
-            zipcode = row['Registered_Office_Address'].split(',')[-1][:6]
-            if (row['CompanyRegistrationdate_date'][0:4] == '2015'):
-                if zipcode in self.zipcode_count:
-                    self.zipcode_count[zipcode] += 1
-                else:
-                    self.zipcode_count[zipcode] = 1
+def calculate(companies_file, zipcode_file):
+    zipcode_to_district = {}
 
-        for zip_code, count in self.zipcode_count.items():
+    with open(zipcode_file, "r", newline="", encoding="utf-8") as zipcode_data:
+        zipcode_reader = csv.DictReader(zipcode_data)
 
-            if zip_code in self.zipcode_to_district:
+        for zipcode_row in zipcode_reader:
+            zipcode_to_district[zipcode_row[ZIPCODE]] = zipcode_row[DISTRICT]
 
-                dist = self.zipcode_to_district[zip_code]
+    district_count = {}
 
-                if dist not in self.district_count:
-                    self.district_count[dist] = 0
+    with open(companies_file, "r", newline="", encoding="utf-8") as companies_data:
+        companies_reader = csv.DictReader(companies_data)
 
-                self.district_count[dist] += count
+        for company in companies_reader:
+            registration_date = company[REGISTRATION_DATE]
+
+            if registration_date[0:4] == "2015":
+                zipcode = company[REGISTERED_ADDRESS].split(",")[-1].strip()[:6]
+
+                if zipcode in zipcode_to_district:
+                    district = zipcode_to_district[zipcode]
+
+                    if district not in district_count:
+                        district_count[district] = 0
+
+                    district_count[district] += 1
+
+    district_count = dict(
+        sorted(
+            district_count.items(),
+            key=lambda item: item[1],
+            reverse=True
+        )
+    )
+
+    return district_count
 
 
-        self.district_count = dict(sorted(self.district_count.items(), key=lambda item: item[1], reverse=True))
+def plot(district_count):
+    plt.figure(figsize=(30, 5))
+
+    plt.bar(
+        district_count.keys(),
+        district_count.values()
+    )
+
+    plt.xticks(rotation=90)
+    plt.xlabel("District")
+    plt.ylabel("Number of Companies")
+    plt.title("Companies Registered in 2015 by District")
+
+    plt.tight_layout()
+    plt.savefig("../plots/q3_companies_registered_2015_by_district.png")
+    plt.show()
 
 
+def execute():
+    companies_file = "../data/maharastra_gov.csv"
+    zipcode_file = "../data/zipcode_to_district.csv"
+
+    district_count = calculate(
+        companies_file,
+        zipcode_file
+    )
+
+    plot(district_count)
+
+    return district_count
 
 
-    def plot(self):
-        self.reg_2015()
-
-        plt.figure(figsize=(30, 5))
-
-        plt.bar(self.district_count.keys(), self.district_count.values())
-        plt.xticks(rotation=90)
-        plt.show()
-
-
-
-    def execute(self):
-        self.reg_2015()
-        self.plot()
+execute()
